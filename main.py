@@ -76,13 +76,63 @@ def remove_over_repeated_words(inverted_index_list: List[InvertedIndex], docs_nu
     return list(filter(lambda ii: len(ii.docs) < docs_num * 0.7 or len(ii.word) >= 5, inverted_index_list))
 
 
+def query(q: str, inverted_index_list: List[InvertedIndex], docs_num: int):
+    """
+    gets a query and prints related docs no
+    :param q: the query
+    :param docs_num: number of all docs
+    """
+    result_arr = []
+
+    words = q.split()
+    for w in words:
+        sw = stemming(w)
+        for ii in inverted_index_list:
+            if ii.word.__eq__(sw):
+                result_arr.append(ii.docs)
+                break
+
+    # printing results
+    result_arr_len = len(result_arr)
+    if result_arr_len == 0:
+        print("چیزی پیدا نکردیم؛ لطفا کلمات جست‌وجوی خود را دقیق‌تر کنید یا کلمات بیش‌تری را به کار ببرید.")
+    elif result_arr_len == 1:
+        print("نتایج:")
+        for r in result_arr[0]:
+            print(r)
+    else:
+        # sorting best results
+        occurrence_arr = [0] * docs_num
+        for r in result_arr:
+            for doc_no in r:
+                occurrence_arr[doc_no - 1] += 1
+
+        # printing results
+        print("نتایج:")
+        i = len(words)
+        while i > 0:
+            for j in range(len(occurrence_arr)):
+                if occurrence_arr[j] == i:
+                    print(j + 1)
+            i -= 1
+
+
 def main():
     # constants
     docs_num = 10
 
+    # initializing inverted index
     inverted_index_list = create_inverted_index_list(docs_num)
     inverted_index_list = remove_over_repeated_words(inverted_index_list, docs_num)
     inverted_index_list = sorted(inverted_index_list, key=lambda ii: ii.word)  # sort inverted index due to words
+
+    # getting queries
+    while True:
+        q = input("\nعبارت مورد نظر خود برای جست‌وجو را وارد کنید (برای خروج ۰۰۰ (سه صفر) را وارد کیند):\n")
+        if not q.__eq__("۰۰۰"):
+            query(q, inverted_index_list, docs_num)
+        else:
+            return
 
 
 if __name__ == '__main__':
