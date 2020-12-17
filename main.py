@@ -82,6 +82,7 @@ def main():
 
     inverted_index_list = create_inverted_index_list(docs_num)
     inverted_index_list = remove_over_repeated_words(inverted_index_list, docs_num)
+    inverted_index_list = sorted(inverted_index_list, key=lambda ii: ii.word)  # sort inverted index due to words
 
 
 if __name__ == '__main__':
