@@ -24,28 +24,19 @@ def stemming(word: str):
     result = re.compile("[^آ-ی]").sub("", result)  # remove all non-Persian-letter characters
 
     # remove conjugation of three auxiliary verbs: خواه، بود، باش
-    result = result.replace("خواهم", "")
-    result = result.replace("خواهی", "")
-    result = result.replace("خواهد", "")
-    result = result.replace("خواهیم", "")
-    result = result.replace("خواهید", "")
-    result = result.replace("خواهند", "")
-    result = result.replace("بودم", "")
-    result = result.replace("بودی", "")
-    result = result.replace("بود", "")
-    result = result.replace("بودیم", "")
-    result = result.replace("بودید", "")
-    result = result.replace("بودند", "")
-    result = result.replace("باشم", "")
-    result = result.replace("باشی", "")
-    result = result.replace("باشد", "")
-    result = result.replace("باشیم", "")
-    result = result.replace("باشید", "")
-    result = result.replace("باشند", "")
+    if result == "خواهم" or result == "خواهی" or result == "خواهد" or result == "خواهیم" or result == "خواهید" or \
+            result == "خواهند" or result == "بودم" or result == "بودی" or result == "بود" or result == "بودیم" or \
+            result == "بودید" or result == "بودند" or result == "باشم" or result == "باشی" or result == "باشد" or \
+            result == "باشیم" or result == "باشید" or result == "باشند":
+        return ""
 
-    result = result.removesuffix('ها')  # remove plural sign ها
+    # remove plural sign ها
+    result = result.removesuffix('ها')
+    result = result.removesuffix('های')
 
-    result = result.removesuffix('تر')  # remove superiority sign تر
+    # check if the word length is more than 4 to avoid changing data after removing superiority sign تر
+    if len(result) > 4:
+        result = result.removesuffix('تر')  # remove superiority sign تر
 
     return result
 
