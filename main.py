@@ -50,7 +50,7 @@ def create_inverted_index_list(doc_num: int):
     inverted_index_list: List[InvertedIndex] = []
 
     for i in range(1, doc_num + 1):
-        with open("sampleDocs/" + str(i) + ".txt", "r", encoding='utf-8') as f:
+        with open("SampleDocs/" + str(i) + ".txt", "r", encoding='utf-8') as f:
             sentences = [re.split("\\s+", line.rstrip('\n')) for line in f]
             for sentence in sentences:
                 for word in sentence:
@@ -67,11 +67,21 @@ def create_inverted_index_list(doc_num: int):
     return inverted_index_list
 
 
+def remove_over_repeated_words(inverted_index_list: List[InvertedIndex], docs_num: int):
+    """
+    removed all words that there are in more than %70 of all docs and their lengths are less than 4
+    :param docs_num: number of all docs
+    :return: filtered inverted index
+    """
+    return list(filter(lambda ii: len(ii.docs) < docs_num * 0.7 or len(ii.word) >= 5, inverted_index_list))
+
+
 def main():
     # constants
     docs_num = 10
 
     inverted_index_list = create_inverted_index_list(docs_num)
+    inverted_index_list = remove_over_repeated_words(inverted_index_list, docs_num)
 
 
 if __name__ == '__main__':
