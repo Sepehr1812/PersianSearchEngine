@@ -1,10 +1,6 @@
 """ This project is implementation of a search engine with Information Retrieval principles on some Persian docs """
 import re
 from math import sqrt, log10
-from typing import List
-
-# vectors of all docs
-docs_vectors: list[list[float]]
 
 
 class InvertedIndex:
@@ -70,8 +66,7 @@ def create_inverted_index_list(doc_num: int):
     :param doc_num: number of docs
     :return: inverted index list
     """
-    global docs_vectors
-    inverted_index_list: List[InvertedIndex] = []
+    inverted_index_list: list[InvertedIndex] = []
 
     for i in range(1, doc_num + 1):
         with open("SampleDocs/" + str(i) + ".txt", "r", encoding='utf-8') as f:
@@ -101,12 +96,10 @@ def create_inverted_index_list(doc_num: int):
 
     inverted_index_list = remove_over_repeated_words(inverted_index_list, doc_num)  # index elimination
 
-    docs_vectors = calculate_doc_vectors(inverted_index_list, doc_num)  # calculating doc vectors
-
     return inverted_index_list
 
 
-def remove_over_repeated_words(inverted_index_list: List[InvertedIndex], docs_num: int):
+def remove_over_repeated_words(inverted_index_list: list[InvertedIndex], docs_num: int):
     """
     removed all words that there are in more than %70 of all docs and their lengths are less than 4
     :param docs_num: number of all docs
@@ -129,12 +122,15 @@ def create_champion_lists(inverted_index_list: list[InvertedIndex], r: int):
     return champion_lists
 
 
-def calculate_query_vector(q: str, inverted_index_list: list[InvertedIndex]):
+def calculate_query_vector_and_doc_vectors(q: str, inverted_index_list: list[InvertedIndex],
+                                           champion_lists: list[ChampionList], doc_vectors: list[list[float]]):
     """
     calculates query vector only due to idf of each term in query in dictionary
-    :return: query vector
+    also returns all docs vectors that appears in query terms
+    :return: query vector and query doc vectors
     """
     query_vector = [0.0] * len(inverted_index_list)
+    query_doc_vectors = []
 
     words = q.split()
     for w in words:
@@ -142,12 +138,16 @@ def calculate_query_vector(q: str, inverted_index_list: list[InvertedIndex]):
         for i in range(len(inverted_index_list)):
             if inverted_index_list[i].word.__eq__(sw):
                 query_vector[i] = inverted_index_list[i].idf
+
+                for d in champion_lists[i].docs:
+                    query_doc_vectors.append(doc_vectors[d - 1])
+
                 break
 
-    return query_vector
+    return query_vector, query_doc_vectors
 
 
-def calculate_doc_vectors(inverted_index_list: List[InvertedIndex], docs_num: int):
+def calculate_doc_vectors(inverted_index_list: list[InvertedIndex], docs_num: int):
     """
     calculates all doc vectors
     :return: a two dimensional array containing all doc vectors
@@ -161,16 +161,17 @@ def calculate_doc_vectors(inverted_index_list: List[InvertedIndex], docs_num: in
     return doc_vectors
 
 
-def query(q: str, inverted_index_list: List[InvertedIndex], docs_num: int):
+def query(q: str, inverted_index_list: list[InvertedIndex], champion_lists: list[ChampionList],
+          doc_vectors: list[list[float]], k: int):
     """
     gets a query and prints related docs no
     :param q: the query
-    :param docs_num: number of all docs
     """
-    result_arr = []
+    query_vector, query_doc_vectors = calculate_query_vector_and_doc_vectors(
+        q, inverted_index_list, champion_lists, doc_vectors
+    )
 
-    query_vector = calculate_query_vector(q, inverted_index_list)
-    # result_arr = get_results()
+    result_arr = get_results(query_doc_vectors, query_vector, k)
 
     # printing results
     # result_arr_len = len(result_arr)
@@ -290,17 +291,20 @@ def get_results(docs: list[list[float]], q: list[float], k):
 def main():
     # constants
     docs_num = 10
+    r = 6  # maximum length of champion lists
+    k = 5  # number of results
 
     # initializing inverted index
     inverted_index_list = create_inverted_index_list(docs_num)
     inverted_index_list = sorted(inverted_index_list, key=lambda ii: ii.word)  # sort inverted index due to words
-    champion_lists = create_champion_lists(inverted_index_list, r=6)
+    champion_lists = create_champion_lists(inverted_index_list, r)  # calculating champion lists
+    doc_vectors = calculate_doc_vectors(inverted_index_list, docs_num)  # calculating doc vectors
 
     # getting queries
     while True:
         q = input("\nعبارت مورد نظر خود برای جست‌وجو را وارد کنید (برای خروج ۰۰۰ (سه صفر) را وارد کیند):\n")
         if not q.__eq__("۰۰۰"):
-            query(q, inverted_index_list, docs_num)
+            query(q, inverted_index_list, champion_lists, doc_vectors, k)
         else:
             return
 
