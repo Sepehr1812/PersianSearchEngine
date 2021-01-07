@@ -23,6 +23,12 @@ class InvertedIndex:
             self.docs[i] = (doc[0], doc[1], (1 + log10(doc[1])) * log10(self.idf))
 
 
+class ChampionList:
+    def __init__(self, word: str, docs: list[int]):
+        self.word = word
+        self.docs = docs
+
+
 def stemming(word: str):
     """
     stemming the input word by five different method
@@ -95,6 +101,15 @@ def remove_over_repeated_words(inverted_index_list: List[InvertedIndex], docs_nu
     :return: filtered inverted index
     """
     return list(filter(lambda ii: len(ii.docs) < docs_num * 0.7 or len(ii.word) >= 5, inverted_index_list))
+
+
+def create_champion_lists(inverted_index_list: list[InvertedIndex], r: int):
+    champion_lists: list[ChampionList] = []
+    for ii in inverted_index_list:
+        docs = list(sorted(ii.docs, key=lambda x: x[2]).__reversed__())
+        champion_lists.append(ChampionList(ii.word, [x[0] for x in docs[:min(len(docs), r)]]))
+
+    return champion_lists
 
 
 def query(q: str, inverted_index_list: List[InvertedIndex], docs_num: int):
@@ -234,8 +249,9 @@ def main():
 
     # initializing inverted index
     inverted_index_list = create_inverted_index_list(docs_num)
-    inverted_index_list = remove_over_repeated_words(inverted_index_list, docs_num)
+    inverted_index_list = remove_over_repeated_words(inverted_index_list, docs_num)  # index elimination
     inverted_index_list = sorted(inverted_index_list, key=lambda ii: ii.word)  # sort inverted index due to words
+    champion_lists = create_champion_lists(inverted_index_list, r=6)
 
     # getting queries
     while True:
