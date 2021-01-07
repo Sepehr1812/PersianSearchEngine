@@ -1,5 +1,6 @@
 """ This project is implementation of a search engine with Information Retrieval principles on some Persian docs """
 import re
+from math import sqrt
 from typing import List
 
 
@@ -115,6 +116,98 @@ def query(q: str, inverted_index_list: List[InvertedIndex], docs_num: int):
                 if occurrence_arr[j] == i:
                     print(j + 1)
             i -= 1
+
+
+def heapify(arr, n, i):
+    """
+    to heapify subtree rooted at index i.
+    :param arr: array we want to heapify
+    :param n: is size of heap
+    """
+    largest = i  # initialize largest as root
+    left = 2 * i + 1
+    right = 2 * i + 2
+
+    # see if left child of root exists and is greater than root
+    if left < n and arr[i] < arr[left]:
+        largest = left
+
+    # see if right child of root exists and is greater than root
+    if right < n and arr[largest] < arr[right]:
+        largest = right
+
+    # change root if needed
+    if largest != i:
+        arr[i], arr[largest] = arr[largest], arr[i]  # swap
+
+        # heapify the root.
+        heapify(arr, n, largest)
+
+
+def heap_sort(arr):
+    """
+    main function to sort an array of given size
+    :param arr: array we want to heapify
+    """
+    n = len(arr)
+
+    # build a max-heap.
+    # since last parent will be at ((n//2)-1) we can start at that location.
+    for i in range(n // 2 - 1, -1, -1):
+        heapify(arr, n, i)
+
+    # one by one extract elements
+    for i in range(n - 1, 0, -1):
+        arr[i], arr[0] = arr[0], arr[i]  # swap
+        heapify(arr, i, 0)
+
+
+def get_similarity(a: list[float], b: list[float]):
+    """
+    :return: similarity of two vectors a and b
+    """
+    numerator = 0
+
+    sum_a2 = 0
+    sum_b2 = 0
+
+    # calculating numerator
+    for i in range(len(a)):
+        numerator += a[i] * b[i]
+
+    if numerator == 0:
+        return 0
+
+    # calculating denominator
+    for i in range(len(a)):
+        sum_a2 += a[i] * a[i]
+        sum_b2 += b[i] * b[i]
+
+    denominator = sqrt(sum_a2) * sqrt(sum_b2)
+
+    return numerator / denominator
+
+
+def get_results(docs: list[list[float]], q: list[float], k):
+    """
+    calculates similarities of vector of each doc with query vector and returns k best matches
+    :param docs: vector of docs
+    :param q: vector of query
+    :return: array of k best match doc numbers
+    """
+
+    # creating similarity array
+    similarity_arr = []
+    for i in range(len(docs)):
+        s = get_similarity(docs[i], q)
+        if s != 0:
+            similarity_arr.append((s, i + 1))
+
+    print(similarity_arr)
+    heap_sort(similarity_arr)
+    print(similarity_arr)
+
+    return list(similarity_arr[-k:].__reversed__())
 
 
 def main():
