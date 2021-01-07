@@ -3,6 +3,9 @@ import re
 from math import sqrt, log10
 from typing import List
 
+# vectors of all docs
+docs_vectors: list[list[float]]
+
 
 class InvertedIndex:
     """
@@ -24,6 +27,10 @@ class InvertedIndex:
 
 
 class ChampionList:
+    """
+    Champion List class contains a term and its champion docs
+    """
+
     def __init__(self, word: str, docs: list[int]):
         self.word = word
         self.docs = docs
@@ -63,6 +70,7 @@ def create_inverted_index_list(doc_num: int):
     :param doc_num: number of docs
     :return: inverted index list
     """
+    global docs_vectors
     inverted_index_list: List[InvertedIndex] = []
 
     for i in range(1, doc_num + 1):
@@ -91,6 +99,10 @@ def create_inverted_index_list(doc_num: int):
         ii.idf = doc_num / len(ii.docs)
         ii.calculate_weights()
 
+    inverted_index_list = remove_over_repeated_words(inverted_index_list, doc_num)  # index elimination
+
+    docs_vectors = calculate_doc_vectors(inverted_index_list, doc_num)  # calculating doc vectors
+
     return inverted_index_list
 
 
@@ -104,12 +116,49 @@ def remove_over_repeated_words(inverted_index_list: List[InvertedIndex], docs_nu
 
 
 def create_champion_lists(inverted_index_list: list[InvertedIndex], r: int):
+    """
+    creates champion lists for each term in dictionary
+    :param r: maximum length of champion list
+    :return: champion lists for all terms
+    """
     champion_lists: list[ChampionList] = []
     for ii in inverted_index_list:
         docs = list(sorted(ii.docs, key=lambda x: x[2]).__reversed__())
         champion_lists.append(ChampionList(ii.word, [x[0] for x in docs[:min(len(docs), r)]]))
 
     return champion_lists
+
+
+def calculate_query_vector(q: str, inverted_index_list: list[InvertedIndex]):
+    """
+    calculates query vector only due to idf of each term in query in dictionary
+    :return: query vector
+    """
+    query_vector = [0.0] * len(inverted_index_list)
+
+    words = q.split()
+    for w in words:
+        sw = stemming(w)
+        for i in range(len(inverted_index_list)):
+            if inverted_index_list[i].word.__eq__(sw):
+                query_vector[i] = inverted_index_list[i].idf
+                break
+
+    return query_vector
+
+
+def calculate_doc_vectors(inverted_index_list: List[InvertedIndex], docs_num: int):
+    """
+    calculates all doc vectors
+    :return: a two dimensional array containing all doc vectors
+    """
+    doc_vectors: list[list[float]] = [[0.0 for _ in range(len(inverted_index_list))] for _ in range(docs_num)]
+
+    for i in range(len(inverted_index_list)):
+        for doc in inverted_index_list[i].docs:
+            doc_vectors[doc[0] - 1][i] = doc[2]
+
+    return doc_vectors
 
 
 def query(q: str, inverted_index_list: List[InvertedIndex], docs_num: int):
@@ -120,37 +169,32 @@ def query(q: str, inverted_index_list: List[InvertedIndex], docs_num: int):
     """
     result_arr = []
 
-    words = q.split()
-    for w in words:
-        sw = stemming(w)
-        for ii in inverted_index_list:
-            if ii.word.__eq__(sw):
-                result_arr.append(ii.docs)
-                break
+    query_vector = calculate_query_vector(q, inverted_index_list)
+    # result_arr = get_results()
 
     # printing results
-    result_arr_len = len(result_arr)
-    if result_arr_len == 0:
-        print("چیزی پیدا نکردیم؛ لطفا کلمات جست‌وجوی خود را دقیق‌تر کنید یا کلمات بیش‌تری را به کار ببرید.")
-    elif result_arr_len == 1:
-        print("نتایج:")
-        for r in result_arr[0]:
-            print(r)
-    else:
-        # sorting best results
-        occurrence_arr = [0] * docs_num
-        for r in result_arr:
-            for doc_no in r:
-                occurrence_arr[doc_no - 1] += 1
-
-        # printing results
-        print("نتایج:")
-        i = len(words)
-        while i > 0:
-            for j in range(len(occurrence_arr)):
-                if occurrence_arr[j] == i:
-                    print(j + 1)
-            i -= 1
+    # result_arr_len = len(result_arr)
+    # if result_arr_len == 0:
+    #     print("چیزی پیدا نکردیم؛ لطفا کلمات جست‌وجوی خود را دقیق‌تر کنید یا کلمات بیش‌تری را به کار ببرید.")
+    # elif result_arr_len == 1:
+    #     print("نتایج:")
+    #     for r in result_arr[0]:
+    #         print(r)
+    # else:
+    #     # sorting best results
+    #     occurrence_arr = [0] * docs_num
+    #     for r in result_arr:
+    #         for doc_no in r:
+    #             occurrence_arr[doc_no - 1] += 1
+    #
+    #     # printing results
+    #     print("نتایج:")
+    #     i = len(words)
+    #     while i > 0:
+    #         for j in range(len(occurrence_arr)):
+    #             if occurrence_arr[j] == i:
+    #                 print(j + 1)
+    #         i -= 1
 
 
 def heapify(arr, n, i):
@@ -249,7 +293,6 @@ def main():
 
     # initializing inverted index
     inverted_index_list = create_inverted_index_list(docs_num)
-    inverted_index_list = remove_over_repeated_words(inverted_index_list, docs_num)  # index elimination
     inverted_index_list = sorted(inverted_index_list, key=lambda ii: ii.word)  # sort inverted index due to words
     champion_lists = create_champion_lists(inverted_index_list, r=6)
 
