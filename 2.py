@@ -1,6 +1,6 @@
 """ This project is implementation of a search engine with Information Retrieval principles on some Persian docs """
 import re
-from math import sqrt
+from math import sqrt, log10
 from typing import List
 
 
@@ -11,8 +11,16 @@ class InvertedIndex:
 
     def __init__(self, word: str, first_doc: int):
         self.word: str = word
-        self.docs: list = [(first_doc, 1)]  # the second argument is tf
+        self.docs: list[(int, int, float)] = [(first_doc, 1, 0)]  # the second argument is tf, the third one is weight
         self.idf: float = 0.0
+
+    def calculate_weights(self):
+        """
+        calculates weights of term self.word in different docs
+        """
+        for i in range(len(self.docs)):
+            doc = self.docs[i]
+            self.docs[i] = (doc[0], doc[1], (1 + log10(doc[1])) * log10(self.idf))
 
 
 def stemming(word: str):
@@ -72,9 +80,10 @@ def create_inverted_index_list(doc_num: int):
                         else:
                             inverted_index_list.append(InvertedIndex(stemmed_word, i))
 
-    # calculating idf
+    # calculating idf and weights
     for ii in inverted_index_list:
         ii.idf = doc_num / len(ii.docs)
+        ii.calculate_weights()
 
     return inverted_index_list
 
