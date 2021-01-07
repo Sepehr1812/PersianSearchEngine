@@ -11,7 +11,8 @@ class InvertedIndex:
 
     def __init__(self, word: str, first_doc: int):
         self.word: str = word
-        self.docs: List[int] = [first_doc]
+        self.docs: list = [(first_doc, 1)]  # the second argument is tf
+        self.idf: float = 0.0
 
 
 def stemming(word: str):
@@ -59,11 +60,21 @@ def create_inverted_index_list(doc_num: int):
                     if not stemmed_word == "":  # check if there is a non-empty string as stemmed word
                         for ii in inverted_index_list:
                             if ii.word.__eq__(stemmed_word):
-                                if not ii.docs.__contains__(i):
-                                    ii.docs.append(i)
+                                if not [x[0] for x in ii.docs].__contains__(i):
+                                    ii.docs.append((i, 1))
+                                else:
+                                    # increasing tf
+                                    for j in range(len(ii.docs)):
+                                        if ii.docs[j][0] == i:
+                                            ii.docs[j] = (i, ii.docs[j][1] + 1)
+                                            break
                                 break
                         else:
                             inverted_index_list.append(InvertedIndex(stemmed_word, i))
+
+    # calculating idf
+    for ii in inverted_index_list:
+        ii.idf = doc_num / len(ii.docs)
 
     return inverted_index_list
 
@@ -203,11 +214,9 @@ def get_results(docs: list[list[float]], q: list[float], k):
         if s != 0:
             similarity_arr.append((s, i + 1))
 
-    print(similarity_arr)
     heap_sort(similarity_arr)
-    print(similarity_arr)
 
-    return list(similarity_arr[-k:].__reversed__())
+    return list(similarity_arr[-k].__reversed__())
 
 
 def main():
