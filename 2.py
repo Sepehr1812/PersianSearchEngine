@@ -10,7 +10,8 @@ class InvertedIndex:
 
     def __init__(self, word: str, first_doc: int):
         self.word: str = word
-        self.docs: list[(int, int, float)] = [(first_doc, 1, 0)]  # the second argument is tf, the third one is weight
+        # the first argument is doc no, the second one is tf, the third one is weight
+        self.docs: list[(int, int, float)] = [(first_doc, 1, 0)]
         self.idf: float = 0.0
 
     def calculate_weights(self):
@@ -69,7 +70,7 @@ def create_inverted_index_list(doc_num: int):
     inverted_index_list: list[InvertedIndex] = []
 
     for i in range(1, doc_num + 1):
-        with open("SampleDocs/" + str(i) + ".txt", "r", encoding='utf-8') as f:
+        with open("SampleDocs1/" + str(i) + ".txt", "r", encoding='utf-8') as f:
             sentences = [re.split("\\s+", line.rstrip('\n')) for line in f]
             for sentence in sentences:
                 for word in sentence:
@@ -126,7 +127,7 @@ def calculate_query_vector_and_doc_vectors(q: str, inverted_index_list: list[Inv
                                            champion_lists: list[ChampionList], doc_vectors: list[list[float]]):
     """
     calculates query vector only due to idf of each term in query in dictionary
-    also returns all docs vectors that appears in query terms
+    also returns all docs vectors that appears in query terms from champion lists
     :return: query vector and query doc vectors
     """
     query_vector = [0.0] * len(inverted_index_list)
@@ -140,7 +141,7 @@ def calculate_query_vector_and_doc_vectors(q: str, inverted_index_list: list[Inv
                 query_vector[i] = inverted_index_list[i].idf
 
                 for d in champion_lists[i].docs:
-                    query_doc_vectors.append(doc_vectors[d - 1])
+                    query_doc_vectors.append((doc_vectors[d - 1], d))
 
                 break
 
@@ -174,28 +175,13 @@ def query(q: str, inverted_index_list: list[InvertedIndex], champion_lists: list
     result_arr = get_results(query_doc_vectors, query_vector, k)
 
     # printing results
-    # result_arr_len = len(result_arr)
-    # if result_arr_len == 0:
-    #     print("چیزی پیدا نکردیم؛ لطفا کلمات جست‌وجوی خود را دقیق‌تر کنید یا کلمات بیش‌تری را به کار ببرید.")
-    # elif result_arr_len == 1:
-    #     print("نتایج:")
-    #     for r in result_arr[0]:
-    #         print(r)
-    # else:
-    #     # sorting best results
-    #     occurrence_arr = [0] * docs_num
-    #     for r in result_arr:
-    #         for doc_no in r:
-    #             occurrence_arr[doc_no - 1] += 1
-    #
-    #     # printing results
-    #     print("نتایج:")
-    #     i = len(words)
-    #     while i > 0:
-    #         for j in range(len(occurrence_arr)):
-    #             if occurrence_arr[j] == i:
-    #                 print(j + 1)
-    #         i -= 1
+    result_arr_len = len(result_arr)
+    if result_arr_len == 0:
+        print("چیزی پیدا نکردیم؛ لطفا کلمات جست‌وجوی خود را دقیق‌تر کنید یا کلمات بیش‌تری را به کار ببرید.")
+    else:
+        print("نتایج:")
+        for r in result_arr:
+            print(r)
 
 
 def heapify(arr, n, i):
@@ -268,7 +254,7 @@ def get_similarity(a: list[float], b: list[float]):
     return numerator / denominator
 
 
-def get_results(docs: list[list[float]], q: list[float], k):
+def get_results(docs: list[(list[float], int)], q: list[float], k):
     """
     calculates similarities of vector of each doc with query vector and returns k best matches
     :param docs: vector of docs
@@ -278,19 +264,20 @@ def get_results(docs: list[list[float]], q: list[float], k):
 
     # creating similarity array
     similarity_arr = []
-    for i in range(len(docs)):
-        s = get_similarity(docs[i], q)
-        if s != 0:
-            similarity_arr.append((s, i + 1))
+    for doc in docs:
+        if not doc[1] in [x[1] for x in similarity_arr]:
+            s = get_similarity(doc[0], q)
+            if s != 0:
+                similarity_arr.append((s, doc[1]))
 
     heap_sort(similarity_arr)
 
-    return list(similarity_arr[-k].__reversed__())
+    return [x[1] for x in list(similarity_arr[-k:].__reversed__())]
 
 
 def main():
     # constants
-    docs_num = 10
+    docs_num = 100
     r = 6  # maximum length of champion lists
     k = 5  # number of results
 
