@@ -86,7 +86,7 @@ def create_inverted_index_list():
                         stemmed_word = stemming(word)
                         if not stemmed_word == "":  # check if there is a non-empty string as stemmed word
                             # calculating number of doc
-                            doc_no = (i + 1) * len(docs[i]) + j + 1
+                            doc_no = i * len(docs[i]) + j + 1
 
                             for ii in inverted_index_list:
                                 if ii.word.__eq__(stemmed_word):
@@ -172,6 +172,25 @@ def calculate_doc_vectors(inverted_index_list: list[InvertedIndex], docs_num: in
             doc_vectors[doc[0] - 1][i] = doc[2]
 
     return doc_vectors
+
+
+def calculate_cluster_centers(doc_vectors: list[list[float]], docs: list[list]):
+    """
+    calculates cluster centers
+    :param docs: all docs (is used for get numbers of clusters and their docs)
+    """
+    cluster_centers = []
+
+    for i in range(len(docs)):
+        c = doc_vectors[i * len(docs[i])]
+        for j in range(1, len(docs[i])):
+            doc_no = i * len(docs[i]) + j
+            for k in range(len(doc_vectors[doc_no])):
+                c[k] = (c[k] + doc_vectors[doc_no][k]) / 2
+
+        cluster_centers.append(c)
+
+    return cluster_centers
 
 
 def query(q: str, inverted_index_list: list[InvertedIndex], champion_lists: list[ChampionList],
@@ -297,6 +316,7 @@ def main():
     inverted_index_list = sorted(inverted_index_list, key=lambda ii: ii.word)  # sort inverted index due to words
     champion_lists = create_champion_lists(inverted_index_list, r)  # calculating champion lists
     doc_vectors = calculate_doc_vectors(inverted_index_list, docs_num)  # calculating doc vectors
+    cluster_centers = calculate_cluster_centers(doc_vectors, docs)  # calculating center od clusters
 
     # getting queries
     while True:
