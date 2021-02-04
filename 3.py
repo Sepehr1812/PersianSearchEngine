@@ -2,6 +2,7 @@
 import re
 from glob import glob
 from math import sqrt, log10
+from os import walk
 
 
 class InvertedIndex:
@@ -70,9 +71,13 @@ def create_inverted_index_list():
     inverted_index_list: list[InvertedIndex] = []
 
     # collecting files
-    docs = []
+    clusters_num = 0
+    for _, d, _ in walk("F:/Uni/7/IR/HW/Project/SampleDocs2"):
+        clusters_num += len(d)  # calculating clusters number
+
+    docs = []  # address of all docs
     doc_num = 0  # number of all docs
-    for i in range(5):
+    for i in range(clusters_num):
         docs.append(glob(r'F:/Uni/7/IR/HW/Project/SampleDocs2/' + str(i) + '/*.txt'))
         doc_num += len(docs[i])
 
@@ -135,27 +140,66 @@ def create_champion_lists(inverted_index_list: list[InvertedIndex], r: int):
     return champion_lists
 
 
+def get_cluster(cluster_centers: list[list[float]], query_vector: list[float]):
+    """
+    find the cluster that is related to the query
+    :param cluster_centers: list of cluster centers
+    :param query_vector: vector of query
+    :return: number of cluster; 0 for Heath, 1 for History, 2 for Mathematics 3 for Technology, 4 for Physics
+    """
+    res = 0
+    s = get_similarity(cluster_centers[0], query_vector)
+    for i in range(1, len(cluster_centers)):
+        similarity = get_similarity(cluster_centers[i], query_vector)
+        if similarity > s:
+            s = similarity
+            res = i
+
+    return res
+
+
 def calculate_query_vector_and_doc_vectors(q: str, inverted_index_list: list[InvertedIndex],
-                                           champion_lists: list[ChampionList], doc_vectors: list[list[float]]):
+                                           champion_lists: list[ChampionList], doc_vectors: list[list[float]],
+                                           cluster_centers: list[list[float]], docs: list[list]):
     """
     calculates query vector only due to idf of each term in query in dictionary
-    also returns all docs vectors that appears in query terms from champion lists
+    also returns related docs vectors that appears in query terms from champion lists due to best cluster
     :return: query vector and query doc vectors
     """
     query_vector = [0.0] * len(inverted_index_list)
     query_doc_vectors = []
 
+    # get vector of query
     words = q.split()
+    stemmed_word = []
     for w in words:
         sw = stemming(w)
+        if not sw == "":  # check if there is a non-empty string as stemmed word
+            stemmed_word.append(sw)
+
+            for i in range(len(inverted_index_list)):
+                if inverted_index_list[i].word.__eq__(stemmed_word[-1]):
+                    query_vector[i] = inverted_index_list[i].idf
+                    break
+
+    c = get_cluster(cluster_centers, query_vector)
+
+    # filter docs due to related cluster to query
+    for w in stemmed_word:
         for i in range(len(inverted_index_list)):
-            if inverted_index_list[i].word.__eq__(sw):
-                query_vector[i] = inverted_index_list[i].idf
-
+            if inverted_index_list[i].word.__eq__(w):
                 for d in champion_lists[i].docs:
-                    query_doc_vectors.append((doc_vectors[d - 1], d))
-
-                break
+                    # check if query_doc_vectors contains this doc (d) or not
+                    for qdv in query_doc_vectors:
+                        if qdv[1] == d:
+                            break
+                    else:
+                        if not c == 0:
+                            if d - 1 in range(c * len(docs[c - 1]), c * len(docs[c - 1]) + len(docs[c])):
+                                query_doc_vectors.append((doc_vectors[d - 1], d))
+                        else:
+                            if d - 1 in range(0, len(docs[0])):
+                                query_doc_vectors.append((doc_vectors[d - 1], d))
 
     return query_vector, query_doc_vectors
 
@@ -194,13 +238,13 @@ def calculate_cluster_centers(doc_vectors: list[list[float]], docs: list[list]):
 
 
 def query(q: str, inverted_index_list: list[InvertedIndex], champion_lists: list[ChampionList],
-          doc_vectors: list[list[float]], k: int):
+          doc_vectors: list[list[float]], cluster_centers: list[list[float]], docs: list[list], k: int):
     """
     gets a query and prints related docs no
     :param q: the query
     """
     query_vector, query_doc_vectors = calculate_query_vector_and_doc_vectors(
-        q, inverted_index_list, champion_lists, doc_vectors
+        q, inverted_index_list, champion_lists, doc_vectors, cluster_centers, docs
     )
 
     result_arr = get_results(query_doc_vectors, query_vector, k)
@@ -211,8 +255,14 @@ def query(q: str, inverted_index_list: list[InvertedIndex], champion_lists: list
         print("چیزی پیدا نکردیم؛ لطفا کلمات جست‌وجوی خود را دقیق‌تر کنید یا کلمات بیش‌تری را به کار ببرید.")
     else:
         print("نتایج:")
+
+        docs_arr = []
+        for d in docs:
+            docs_arr.extend(d)
+
+        # printing name of docs
         for r in result_arr:
-            print(r)
+            print(docs_arr[r - 1][37:-4])
 
 
 def heapify(arr, n, i):
@@ -322,7 +372,7 @@ def main():
     while True:
         q = input("\nعبارت مورد نظر خود برای جست‌وجو را وارد کنید (برای خروج ۰۰۰ (سه صفر) را وارد کیند):\n")
         if not q.__eq__("۰۰۰"):
-            query(q, inverted_index_list, champion_lists, doc_vectors, k)
+            query(q, inverted_index_list, champion_lists, doc_vectors, cluster_centers, docs, k)
         else:
             return
 
